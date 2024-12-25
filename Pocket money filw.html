@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank App with Emergency Mode</title>
+    <style>
+        .scare {
+            border: 3px solid red;
+            animation: flash 0.5s alternate infinite;
+        }
+        @keyframes flash {
+            from { background-color: white; }
+            to { background-color: pink; }
+        }
+        #timer {
+            font-weight: bold;
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Bank App with Emergency Mode</h1>
+        <form id="login-form">
+            <input type="text" id="username" placeholder="Username" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <button type="submit">Login</button>
+        </form>
+        <form id="bank-form" style="display: none;">
+            <p>Balance: <span id="balance">0</span></p>
+            <div id="actions">
+                <button type="button" onclick="showInput('deposit')">Deposit</button>
+                <button type="button" onclick="showInput('withdraw')">Withdraw</button>
+            </div>
+            <div id="input-section">
+                <input type="number" id="amount" placeholder="Enter Amount" required>
+                <input type="text" id="occasion" placeholder="Occasion" required>
+                <button type="button" id="emergency-button" onclick="handleEmergency()">Emergency</button>
+                <button type="button" onclick="performAction()">Submit</button>
+                <p id="timer" style="display: none;"></p>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        let balance = parseFloat(localStorage.getItem('balance')) || 0;
+        let credentials = { username: "user", password: "1234" };
+        let currentAction = null;
+        let emergencyTimer = null;
+
+        document.getElementById('login-form').onsubmit = function(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (username === credentials.username && password === credentials.password) {
+                document.getElementById('login-form').style.display = "none";
+                document.getElementById('bank-form').style.display = "block";
+                updateBalance();
+            } else {
+                alert("Invalid username or password!");
+            }
+        };
+
+        function showInput(action) {
+            currentAction = action;
+            const inputSection = document.getElementById('input-section');
+            inputSection.style.display = "block";
+            inputSection.classList.add('scare');
+            setTimeout(() => {
+                inputSection.classList.remove('scare');
+            }, 2000);
+            document.getElementById('occasion').value = '';
+        }
+
+        function performAction() {
+            const amount = parseFloat(document.getElementById('amount').value);
+            const occasion = document.getElementById('occasion').value;
+
+            if (currentAction === 'deposit') {
+                if (amount > 0) {
+                    if (!occasion) {
+                        alert("Occasion is required!");
+                        return;
+                    }
+                    balance += amount;
+                    saveBalance();
+                    alert(`Deposit successful! Occasion: ${occasion}`);
+                } else {
+                    alert("Enter a valid amount.");
+                }
+            } else if (currentAction === 'withdraw') {
+                if (amount > 0 && amount <= balance) {
+                    if (!occasion) {
+                        alert("Occasion is required!");
+                        return;
+                    }
+                    balance -= amount;
+                    saveBalance();
+                    alert(`Withdrawal successful! Occasion: ${occasion}`);
+                } else {
+                    alert("Invalid amount or insufficient balance.");
+                }
+            }
+            document.getElementById('amount').value = '';
+            document.getElementById('occasion').value = '';
+            document.getElementById('input-section').style.display = "none";
+        }
+
+        function handleEmergency() {
+            const amount = parseFloat(document.getElementById('amount').value);
+            if (currentAction === 'deposit' || currentAction === 'withdraw') {
+                if (amount > 0 && (currentAction === 'deposit' || amount <= balance)) {
+                    balance = currentAction === 'deposit' ? balance + amount : balance - amount;
+                    saveBalance();
+                    alert(`Emergency transaction successful! Please enter an occasion within 5 minutes.`);
+                    startTimer();
+                    document.getElementById('input-section').style.display = "none";
+                } else {
+                    alert("Invalid amount or insufficient balance.");
+                }
+            }
+        }
+
+        function startTimer() {
+            let countdown = 300; // 5 minutes
+            const timerElement = document.getElementById('timer');
+            timerElement.style.display = "block";
+
+            emergencyTimer = setInterval(() => {
+                const minutes = Math.floor(countdown / 60);
+                const seconds = countdown % 60;
+                timerElement.textContent = `Time remaining: ${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
+                countdown--;
+
+                if (countdown < 0) {
+                    clearInterval(emergencyTimer);
+                    alert("Time's up! Please enter an occasion now.");
+                    timerElement.style.display = "none";
+                }
+            }, 1000);
+        }
+
+        function saveBalance() {
+            localStorage.setItem('balance', balance);
+            updateBalance();
+        }
+
+        function updateBalance() {
+            document.getElementById('balance').textContent = balance.toFixed(2);
+        }
+    </script>
+</body>
+</html>
